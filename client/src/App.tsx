@@ -1,26 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import UploadPage, { Point3D } from './pages/UploadPage';
+// import Visualizer3D from './components/Visualizer3D'; // We'll build this next
 
-function App() {
+const App: React.FC = () => {
+  const [data, setData] = useState<Point3D[] | null>(null);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="min-h-screen bg-gray-100 p-4 text-center">
+      <h1 className="text-2xl font-bold mb-6">3D Data Visualizer</h1>
+      {!data ? (
+        <UploadPage onDataParsed={setData} />
+      ) : (
+        <div>
+          {/* Temporary Output */}
+          <pre>{JSON.stringify(data, null, 2)}</pre>
+          {/* Replace with <Visualizer3D points={data} /> in next step */}
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default App;
