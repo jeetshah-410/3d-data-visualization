@@ -10,17 +10,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      {!data ? (
-        <div className="min-h-screen bg-gray-100 p-4 text-center">
-          <h1 className="text-2xl font-bold mb-6">3D Data Visualizer</h1>
+    <div className="h-screen w-screen overflow-hidden">
+      {
+        data === null ? (
           <UploadPage onDataParsed={setData} />
-        </div>
-      ) : (
-        <Visualizer3D data={data} onBack={handleBackToUpload} />
-      )}
+        ) : (
+          <Visualizer3D data={data} onBack={() => setData(null)} />
+        )
+      }
+
     </div>
-  );
+) ;
 };
 
 export default App;
