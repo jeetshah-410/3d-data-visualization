@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import UploadPage, { Point3D } from './pages/UploadPage';
-// import Visualizer3D from './components/Visualizer3D'; // We'll build this next
+import Visualizer3D from './components/Visualizer3D';
 
 const App: React.FC = () => {
   const [data, setData] = useState<Point3D[] | null>(null);
 
+  const handleBackToUpload = () => {
+    setData(null);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4 text-center">
-      <h1 className="text-2xl font-bold mb-6">3D Data Visualizer</h1>
+    <div className="min-h-screen">
       {!data ? (
-        <UploadPage onDataParsed={setData} />
-      ) : (
-        <div>
-          {/* Temporary Output */}
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-          {/* Replace with <Visualizer3D points={data} /> in next step */}
+        <div className="min-h-screen bg-gray-100 p-4 text-center">
+          <h1 className="text-2xl font-bold mb-6">3D Data Visualizer</h1>
+          <UploadPage onDataParsed={setData} />
         </div>
+      ) : (
+        <Visualizer3D data={data} onBack={handleBackToUpload} />
       )}
     </div>
   );
