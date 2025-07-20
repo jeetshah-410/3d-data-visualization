@@ -68,7 +68,7 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
 
     setUploading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/upload', formData);
+      const res = await axios.post("https://3d-data-visualization-production.up.railway.app/api/upload", formData);
       setHeaders(res.data.headers);
       setRawData(res.data.data);
       setSelectedFile('');
