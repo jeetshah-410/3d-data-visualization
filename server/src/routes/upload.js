@@ -5,6 +5,7 @@ const path = require('path');
 const csvParser = require('csv-parser');
 const upload = require('../middleware/upload');
 const pool = require('../../db'); // PostgreSQL connection
+const redis = require('../redisClient');
 
 router.post('/', upload.single('file'), async (req, res) => {
   const { originalname, mimetype, size, filename, path: filePath } = req.file;
@@ -110,6 +111,15 @@ router.post('/', upload.single('file'), async (req, res) => {
 router.get('/file/:filename', async (req, res) => {
   const { filename } = req.params;
   try {
+    // Check Redis cache first
+    const cacheKey = `fileData:${filename}`;
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      console.log('Cache hit for', filename);
+      return res.json(JSON.parse(cachedData));
+    }
+    console.log('Cache miss for', filename);
+
     const result = await pool.query('SELECT * FROM datasets WHERE filename = $1', [filename]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'File not found.' });
@@ -161,14 +171,19 @@ router.get('/file/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Unsupported file format.' });
     }
 
-    console.log('Metadata columns:', metadata.columns);
-    console.log('Sample data row:', parsedData[0]);
-
-    res.json({
+    const responseData = {
       success: true,
       headers: metadata.columns,
       data: parsedData,
-    });
+    };
+
+    // Cache the response data in Redis for 1 hour
+    await redis.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
+
+    console.log('Metadata columns:', metadata.columns);
+    console.log('Sample data row:', parsedData[0]);
+
+    res.json(responseData);
   } catch (err) {
     console.error('Error fetching file data:', err.message);
     res.status(500).json({ error: 'Failed to fetch file data.' });
@@ -178,6 +193,15 @@ router.get('/file/:filename', async (req, res) => {
 // Also update the files endpoint to properly parse metadata
 router.get('/files', async (req, res) => {
   try {
+    // Check Redis cache first
+    const cacheKey = 'filesList';
+    const cachedFiles = await redis.get(cacheKey);
+    if (cachedFiles) {
+      console.log('Cache hit for files list');
+      return res.json(JSON.parse(cachedFiles));
+    }
+    console.log('Cache miss for files list');
+
     const result = await pool.query('SELECT filename, originalname, size, mimetype, metadata FROM datasets ORDER BY id DESC');
     
     // Parse metadata for each file
@@ -199,8 +223,13 @@ router.get('/files', async (req, res) => {
         metadata: metadata
       };
     });
+
+    const responseData = { success: true, files: filesWithParsedMetadata };
+
+    // Cache the files list in Redis for 1 hour
+    await redis.set(cacheKey, JSON.stringify(responseData), 'EX', 3600);
     
-    res.json({ success: true, files: filesWithParsedMetadata });
+    res.json(responseData);
   } catch (err) {
     console.error('Error fetching files:', err.message);
     res.status(500).json({ error: 'Failed to fetch files.' });

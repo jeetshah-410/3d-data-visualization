@@ -1,34 +1,27 @@
-version: '3.8'
-
+version: "3.9"
 services:
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: data_viz_platform
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - "3000:3000"
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - REDIS_URL=${REDIS_URL}
+      - PORT=3000
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports:
+      - "80:80"
 
   redis:
-    image: redis:6-alpine
+    image: redis:alpine
     ports:
       - "6379:6379"
-
-  app:
-    build: .
-    ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - ./server:/app/server
-      - ./client:/app/client
-
-volumes:
-  postgres_data:

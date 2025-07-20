@@ -3,12 +3,13 @@ require('dotenv').config(); // Load from .env
 
 // Debug: Check if environment variables are loaded
 console.log('DB Config:', {
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASS ? '***' : 'UNDEFINED',
-  port: process.env.DB_PORT,
+  user: process.env.DB_USER || 'MISSING',
+  host: process.env.DB_HOST || 'MISSING',
+  database: process.env.DB_NAME || 'MISSING',
+  password: process.env.DB_PASS === undefined ? 'UNDEFINED' : (process.env.DB_PASS === '' ? 'EMPTY' : '***'),
+  port: process.env.DB_PORT || 'MISSING',
 });
+
 
 const pool = new Pool({
   user: process.env.DB_USER || 'victor',
