@@ -1,28 +1,24 @@
-const express = require('express');
-const upload = require('./middleware/upload'); // your multer config
-const csv = require('csv-parser');
-
+const multer = require('multer');
+const path = require('path');
 const fs = require('fs');
-const router = express.Router();
 
-router.post('/upload', upload.single('file'), (req, res) => {
-  const filePath = req.file.path;
-  const results = [];
+// Create the /uploads folder if it doesn't exist
+const uploadPath = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath);
+}
 
-  fs.createReadStream(filePath)
-    .pipe(csv())
-    .on('data', (data) => results.push(data))
-    .on('end', () => {
-      fs.unlinkSync(filePath); // Delete after use (IMPORTANT on Railway)
-
-      const columns = Object.keys(results[0] || {});
-      res.json({
-        message: 'Upload successful',
-        metadata: {
-          columns,
-          rows: results.length,
-          preview: results.slice(0, 5),
-        }
-      });
-    });
+// Configure storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
+
+// Export configured multer instance
+const upload = multer({ storage });
+
+module.exports = upload;
