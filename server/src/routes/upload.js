@@ -53,13 +53,20 @@ async function parseCSV(buffer, metadata) {
     const rows = [];
     const preview = [];
 
-    const readable = new stream.Readable();
-    readable.push(buffer);
-    readable.push(null); // EOF
+    const readable = new stream.Readable({
+      read() {
+        this.push(buffer);
+        this.push(null); // End of stream
+      },
+    });
 
     readable
       .pipe(csvParser())
+      .on('headers', (headers) => {
+        console.log('CSV Headers:', headers);
+      })
       .on('data', (row) => {
+        console.log('CSV Row:', row); // <-- 🔍 log each row
         metadata.rows += 1;
         Object.keys(row).forEach((col) => columnsSet.add(col));
         rows.push(row);
@@ -68,9 +75,13 @@ async function parseCSV(buffer, metadata) {
       .on('end', () => {
         metadata.columns = Array.from(columnsSet);
         metadata.preview = preview;
+        console.log('Parsed rows:', rows.length);
         resolve(rows);
       })
-      .on('error', reject);
+      .on('error', (err) => {
+        console.error('CSV parse error:', err);
+        reject(err);
+      });
   });
 }
 
