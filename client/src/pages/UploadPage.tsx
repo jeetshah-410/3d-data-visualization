@@ -24,6 +24,9 @@ interface Props {
   onDataParsed: (data: Point3D[]) => void;
 }
 
+// Configuration for API base URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
 const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -38,25 +41,35 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
   const [selectedFile, setSelectedFile] = useState<string>('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
 
   const fetchUploadedFiles = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const res = await axios.get('http://localhost:5000/api/upload/files');
+      const res = await axios.get(`${API_BASE_URL}/api/upload/files`, {
+        timeout: 10000 // 10 second timeout
+      });
       if (res.data.success) {
         setUploadedFiles(res.data.files);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch uploaded files:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to fetch files');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
+      setError(''); // Clear any previous errors
     }
   };
 
@@ -67,15 +80,23 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
     formData.append('file', file);
 
     setUploading(true);
+    setError('');
     try {
-      const res = await axios.post("https://3d-data-visualization-production.up.railway.app/api/upload", formData);
+      const res = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
+        timeout: 30000, // 30 second timeout for file upload
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       setHeaders(res.data.headers);
       setRawData(res.data.data);
       setSelectedFile('');
-      fetchUploadedFiles();
-    } catch (err) {
+      await fetchUploadedFiles(); // Refresh the file list
+    } catch (err: any) {
       console.error('Upload failed:', err);
-      alert('Upload failed');
+      const errorMessage = err.response?.data?.error || err.message || 'Upload failed';
+      setError(errorMessage);
+      alert(`Upload failed: ${errorMessage}`);
     }
     setUploading(false);
   };
@@ -100,9 +121,14 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
 
   const handleFileSelect = async (filename: string) => {
     setSelectedFile(filename);
-    setIsMenuOpen(false); // Close menu after selection
+    setIsMenuOpen(false);
+    setLoading(true);
+    setError('');
+    
     try {
-      const res = await axios.get(`http://localhost:5000/api/upload/file/${filename}`);
+      const res = await axios.get(`${API_BASE_URL}/api/upload/file/${filename}`, {
+        timeout: 15000 // 15 second timeout
+      });
       if (res.data.success) {
         setHeaders(res.data.headers);
         setRawData(res.data.data);
@@ -142,11 +168,14 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
         setZCol(defaultZ);
         setColorCol(defaultColor);
         setSizeCol(defaultSize);
-        
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch file data:', err);
-      alert('Failed to fetch file data');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch file data';
+      setError(errorMessage);
+      alert(`Failed to fetch file data: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,6 +186,25 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-100 via-white to-blue-100 relative">
+      {/* Error Display */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50 max-w-md">
+          <button onClick={() => setError('')} className="float-right text-red-500 hover:text-red-700">
+            ×
+          </button>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Connection Status Indicator */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          error ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+        }`}>
+          {error ? 'Connection Error' : 'Connected'}
+        </div>
+      </div>
+
       {/* Menu Button */}
       {!isMenuOpen && (
         <button
@@ -225,6 +273,14 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
               </svg>
             </div>
           </div>
+
+          {/* Loading indicator */}
+          {loading && (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+              <p className="text-sm text-gray-600 mt-2">Loading...</p>
+            </div>
+          )}
 
           {/* File List */}
           <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -305,7 +361,7 @@ const UploadPage: React.FC<Props> = ({ onDataParsed }) => {
 
           <button
             onClick={handleUpload}
-            disabled={uploading}
+            disabled={uploading || !file}
             className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 disabled:bg-gray-400 transition-colors shadow-md focus:outline-none focus:ring-4 focus:ring-blue-300 font-semibold text-lg"
           >
             {uploading ? 'Uploading...' : 'Upload'}

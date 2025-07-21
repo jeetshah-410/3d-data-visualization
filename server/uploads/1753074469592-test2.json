@@ -1,0 +1,6 @@
+[
+  { "x": 1, "y": 2, "z": 3, "colorValue": "A", "sizeValue": 50 },
+  { "x": -2, "y": 1, "z": -1, "colorValue": "B", "sizeValue": 75 },
+  { "x": 3, "y": -1, "z": 2, "colorValue": "C", "sizeValue": 25 }
+]
+

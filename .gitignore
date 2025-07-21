@@ -26,10 +26,6 @@ pids/
 *.seed
 *.pid.lock
 
-# Uploads
-uploads/
-!uploads/.gitkeep
-
 # IDE
 .vscode/
 .idea/
